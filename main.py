@@ -19,18 +19,19 @@ def main():
     pdf = st.file_uploader("Upload your PDF", type="pdf")
         
     if pdf is not None:
-        pdf_reader = PdfReader(pdf)
-        
-        text = ""
-        for page in pdf_reader.pages:
-            text += page.extract_text()
+        with st.spinner('Processing...'):
+            pdf_reader = PdfReader(pdf)
             
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000, # it will divide the text into 800 chunk size each (800 tokens)
-            chunk_overlap=200,
-            length_function=len
-        )
-        chunks = text_splitter.split_text(text=text)
+            text = ""
+            for page in pdf_reader.pages:
+                text += page.extract_text()
+                
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=1000, # it will divide the text into 800 chunk size each (800 tokens)
+                chunk_overlap=200,
+                length_function=len
+            )
+            chunks = text_splitter.split_text(text=text)
         
         ## embeddings
         store_name = pdf.name[:-4]
@@ -40,7 +41,7 @@ def main():
         if os.path.exists(f"{vector_store_path}.pkl"):
             with open(f"{vector_store_path}.pkl", 'rb') as f:
                 VectorStore = pickle.load(f)
-            st.write("Embeddings loaded from the Disk")
+
                 
         else:
             with get_openai_callback() as cb:
@@ -62,9 +63,11 @@ def main():
             llm = OpenAI(model_name='gpt-3.5-turbo',openai_api_key=openai_api_key)
 
             chain = load_qa_chain(llm=llm, chain_type='stuff')
-            with get_openai_callback() as cb:
-                response = chain.run(input_documents=docs, question=query)
-                st.write("Total cost query: $" + str(cb.total_cost))
+
+            with st.spinner('Processing...'):
+                with get_openai_callback() as cb:
+                    response = chain.run(input_documents=docs, question=query)
+                    st.write("Total cost query: $" + str(cb.total_cost))
             st.write(response)
             
             
